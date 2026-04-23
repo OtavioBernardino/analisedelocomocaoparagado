@@ -1,0 +1,259 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sistema de Registro Bovino</title>
+    <style>
+        /* CSS - Estilo Visual */
+        body { font-family: 'Segoe UI', Arial, sans-serif; background-color: #f0f2f5; padding: 15px; margin: 0; }
+        
+        .container { 
+            max-width: 1100px; 
+            margin: auto; 
+            background: white; 
+            padding: 20px; 
+            border-radius: 12px; 
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1); 
+        }
+
+        h2 { color: #1b5e20; text-align: center; margin-bottom: 20px; }
+
+        /* Balão de aviso */
+        #status-aviso {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            padding: 12px 25px;
+            background: #2e7d32;
+            color: white;
+            border-radius: 8px;
+            display: none;
+            z-index: 9999;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            font-weight: bold;
+        }
+
+        .acoes { 
+            display: flex; 
+            gap: 10px; 
+            margin-bottom: 20px; 
+            flex-wrap: wrap; 
+            justify-content: center;
+        }
+
+        /* Estilo da Tabela e Scroll */
+        .table-wrapper { 
+            max-height: 500px; 
+            overflow-y: auto; 
+            overflow-x: auto; 
+            border: 1px solid #ddd; 
+            border-radius: 8px; 
+        }
+
+        table { width: 100%; border-collapse: collapse; min-width: 850px; }
+        
+        th { 
+            position: sticky; 
+            top: 0; 
+            background-color: #2e7d32; 
+            color: white; 
+            padding: 12px; 
+            z-index: 10; 
+            text-align: left;
+            font-size: 14px;
+        }
+
+        td { border-bottom: 1px solid #eee; padding: 8px; }
+
+        input { 
+            width: 100%; 
+            padding: 10px; 
+            border: 1px solid #ccc; 
+            border-radius: 4px; 
+            box-sizing: border-box; 
+            font-size: 14px;
+        }
+
+        input:focus { border-color: #2e7d32; outline: none; background-color: #f9fff9; }
+
+        /* Botões */
+        .btn { 
+            border: none; 
+            padding: 12px 20px; 
+            border-radius: 6px; 
+            cursor: pointer; 
+            font-weight: bold; 
+            color: white; 
+            transition: all 0.2s;
+            font-size: 13px;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        .btn-add { background-color: #2e7d32; }
+        .btn-save { background-color: #f39c12; }
+        .btn-export { background-color: #1976d2; }
+        .btn-delete { background-color: #e74c3c; }
+        
+        .btn:hover { opacity: 0.9; transform: translateY(-1px); }
+        .btn:active { transform: translateY(0); }
+
+        .col-num { width: 50px; text-align: center; font-weight: bold; color: #555; }
+    </style>
+</head>
+<body>
+
+<div id="status-aviso">Dados salvos!</div>
+
+<div class="container">
+    <h2>Registro de Lote Bovino</h2>
+    
+    <div class="acoes">
+        <button class="btn btn-add" onclick="adicionarLinha()">➕ Novo Registro</button>
+        <button class="btn btn-save" onclick="salvarDados()">💾 Salvar Novos</button>
+        <button class="btn btn-export" onclick="exportarCSV()">📥 Exportar CSV</button>
+        <button class="btn btn-delete" onclick="limparTudo()">🗑️ Apagar Tudo</button>
+    </div>
+
+    <div class="table-wrapper">
+        <table id="tabelaRegistros">
+            <thead>
+                <tr>
+                    <th class="col-num">Nº</th>
+                    <th>Brinco da Vaca</th>
+                    <th>Nome do Lote</th>
+                    <th style="width: 80px;">Legenda CG</th>
+                    <th style="width: 80px;">Legenda M</th>
+                    <th>Observações</th>
+                </tr>
+            </thead>
+            <tbody>
+                </tbody>
+        </table>
+    </div>
+</div>
+
+<script>
+    /* JavaScript - Lógica do Sistema */
+
+    // 1. Ao carregar a página
+    window.onload = function() {
+        carregarDadosIniciais();
+    };
+
+    function carregarDadosIniciais() {
+        const corpo = document.querySelector("#tabelaRegistros tbody");
+        corpo.innerHTML = "";
+        
+        const salvos = JSON.parse(localStorage.getItem("db_bovino")) || [];
+        
+        if (salvos.length > 0) {
+            salvos.forEach((item, index) => renderizarLinha(item, index + 1));
+        }
+        // Sempre adiciona uma linha vazia para começar
+        adicionarLinha(); 
+    }
+
+    function renderizarLinha(dados = {}, numFixo = null) {
+        const corpo = document.querySelector("#tabelaRegistros tbody");
+        const novaLinha = corpo.insertRow();
+        const numero = numFixo || corpo.rows.length;
+
+        novaLinha.innerHTML = `
+            <td class="col-num">${numero}</td>
+            <td><input type="text" class="campo-brinco" value="${dados.brinco || ''}" placeholder="Obrigatório para salvar"></td>
+            <td><input type="text" class="campo-lote" value="${dados.lote || ''}"></td>
+            <td><input type="text" class="campo-cg" value="${dados.cg || ''}"></td>
+            <td><input type="text" class="campo-m" value="${dados.m || ''}"></td>
+            <td><input type="text" class="campo-obs" value="${dados.obs || ''}"></td>
+        `;
+    }
+
+    function adicionarLinha() {
+        renderizarLinha();
+        const wrapper = document.querySelector(".table-wrapper");
+        wrapper.scrollTop = wrapper.scrollHeight; // Rola para o fim
+    }
+
+    // 2. Lógica de Salvar (Apenas novos)
+    function salvarDados() {
+        const linhas = document.querySelectorAll("#tabelaRegistros tbody tr");
+        let salvosNoBanco = JSON.parse(localStorage.getItem("db_bovino")) || [];
+        
+        // Criar uma lista de brincos que já existem para não repetir
+        const listaBrincosExistentes = salvosNoBanco.map(item => String(item.brinco).trim().toLowerCase());
+        
+        let contadorNovos = 0;
+
+        linhas.forEach(linha => {
+            const brincoVal = linha.querySelector(".campo-brinco").value.trim();
+            
+            // Regra: Tem que ter brinco e não pode ser repetido
+            if (brincoVal !== "" && !listaBrincosExistentes.includes(brincoVal.toLowerCase())) {
+                const objeto = {
+                    brinco: brincoVal,
+                    lote: linha.querySelector(".campo-lote").value,
+                    cg: linha.querySelector(".campo-cg").value,
+                    m: linha.querySelector(".campo-m").value,
+                    obs: linha.querySelector(".campo-obs").value
+                };
+                salvosNoBanco.push(objeto);
+                listaBrincosExistentes.push(brincoVal.toLowerCase());
+                contadorNovos++;
+            }
+        });
+
+        if (contadorNovos > 0) {
+            localStorage.setItem("db_bovino", JSON.stringify(salvosNoBanco));
+            mostrarAviso(`${contadorNovos} novo(s) registro(s) salvo(s)!`);
+        } else {
+            // Se o usuário clicou manualmente e não tinha nada novo
+            console.log("Sem novos registros para adicionar.");
+        }
+    }
+
+    // 3. Limpar LocalStorage
+    function limparTudo() {
+        if (confirm("Deseja apagar todos os registros salvos permanentemente?")) {
+            localStorage.removeItem("db_bovino");
+            carregarDadosIniciais();
+            mostrarAviso("Banco de dados limpo!");
+        }
+    }
+
+    // 4. Exportar CSV
+    function exportarCSV() {
+        const dados = JSON.parse(localStorage.getItem("db_bovino")) || [];
+        if (dados.length === 0) {
+            alert("Não há dados salvos para exportar. Salve os registros primeiro.");
+            return;
+        }
+
+        let csv = "\uFEFFNº;Brinco;Lote;CG;M;Observações\n";
+        dados.forEach((item, i) => {
+            csv += `${i+1};${item.brinco};${item.lote};${item.cg};${item.m};${item.obs}\n`;
+        });
+
+        const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+        const link = document.createElement("a");
+        link.href = URL.createObjectURL(blob);
+        link.download = "registros_vaca.csv";
+        link.click();
+    }
+
+    // 5. Funções Auxiliares
+    function mostrarAviso(texto) {
+        const aviso = document.getElementById("status-aviso");
+        aviso.innerText = texto;
+        aviso.style.display = "block";
+        setTimeout(() => { aviso.style.display = "none"; }, 3000);
+    }
+
+    // Auto-salvamento a cada 30 segundos
+    setInterval(salvarDados, 30000);
+</script>
+
+</body>
+</html>
